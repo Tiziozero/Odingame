@@ -2,13 +2,14 @@ package main
 
 import "core:fmt"
 import "core:math"
+import "core:mem"
 import "core:time"
 
 import rl "vendor:raylib"
 
 IMAGE_WIDTH :: 96
 IMAGE_HEIGHT :: 96
-
+FPS :: 10
 EntityDirection :: enum {
     Up,
     Down,
@@ -30,19 +31,36 @@ Entity :: struct {
     // entity position
     pos: rl.Vector2,
     velocity: rl.Vector2,
-    body: rl.Rectangle,
     speed: f32,
+    // body of entity to take damage
+    body: rl.Rectangle,
+
+    // attack
+    atkpts: f32,
+    defpts: f32,
+    // attack flag -> in attacking state
+    attacking: bool,
+    // attack animation after hittin (when e.attacking is false)
+    // to keep animation goin
+    in_attack_animation: bool,
+
+    attack_speed_slow_down: f32,
+    // flag to determinate when entity is attacking
+    to_deal_damage: bool,
+    // for chaining attacks to change them
+    attack_index: int,
+
+    attack_range: int,
 
     // entity state
     state: EntityState,
     previous_state: EntityState,
-    attack_1_frames: []int,
+    hp: f32,
     // animations
     direction: EntityDirection,
     draw_rect: rl.Rectangle,
     source_rect: rl.Rectangle,
     frame_time: f32,
-    fps: int,
 }
 Player :: struct {
     using Entity,
@@ -54,6 +72,37 @@ State :: struct {
     quit: bool,
 }
 
+damage_entity :: proc(e: ^Entity, dmg: f32) {
+    d := dmg - e.defpts
+    e.hp -= d
+}
+get_attack_damage :: proc(e: ^Entity) -> f32 {
+    
+    return e.atkpts;
+}
+entity_attack :: proc(s: ^State, e: ^Entity) {
+    for _, ent in s.entities {
+        d := e.pos - ent.pos
+        if math.sqrt(d.x*d.x-d.y-d.y) < f32(e.attack_range) {
+            fmt.println("Entity attacking", d, math.sqrt(d.x*d.x-d.y-d.y), e.attack_range)
+            damage_entity(ent, get_attack_damage(e))
+        }
+    }
+}
+
+state_add_texture :: proc(s: ^State, path: cstring, id: TextureMapID) {
+    t_ := rl.LoadTexture(path)
+    s.textures[id] = t_
+}
+free_state :: proc(s: ^State) {
+    for id, texture in s.textures {
+        fmt.println("Freed:", id);
+        rl.UnloadTexture(texture);
+    }
+    // free maps and arrays
+    delete(s.textures)
+    delete(s.entities)
+}
 handle_events :: proc(s: ^State) {
     player := s.player
     k := rl.GetKeyPressed()
@@ -79,7 +128,9 @@ handle_events :: proc(s: ^State) {
         #partial switch k {
         case rl.KeyboardKey.Q: s.quit = true
         case rl.KeyboardKey.L: {
-            s.player.state = .Attacking;
+            player.state = .Attacking;
+            player.attacking = true
+            player.in_attack_animation = true
             fmt.println("Attacking")
         }
         case : {} // default case
@@ -89,80 +140,106 @@ handle_events :: proc(s: ^State) {
 }
 
 update :: proc(s: ^State, dt: f32) {
-    draw_update_entity_animation(s, dt)
-    player := s.player
-
-    if s.player.state != .Attacking {
-        if player.velocity.x != 0 || player.velocity.y != 0 {
-            player.state = .Running
-        } else {
-            player.state = .Idle
-        }
-        player.pos += player.velocity * dt
-        player.draw_rect.x, player.draw_rect.y = player.pos.x, player.pos.y
-        if player.velocity.y != 0 {
-            if player.velocity.y > 0 {
-                player.direction = EntityDirection.Down
-            } else {
-                player.direction = EntityDirection.Up
-            }
-        }
-        if player.velocity.x != 0 {
-            if player.velocity.x > 0 {
-                player.direction = EntityDirection.Right
-            } else {
-                player.direction = EntityDirection.Left
-            }
-        }
-    } else { // attack
-        
-    }
-}
-
-draw_update_entity_animation :: proc(s: ^State, dt: f32) {
     for _, e in s.entities {
-        if e.previous_state != e.state {
-            e.previous_state = e.state
-            e.frame_time = 0
+        e.state = .Idle
+        if !e.attacking {
+            if e.velocity.x != 0 || e.velocity.y != 0 {
+                e.state = .Running
+            }
+            if e.in_attack_animation {
+                e.state = .Attacking
+            }
+            e.pos += e.velocity * dt
+        } else {
+            e.state = .Attacking
+            if e.frame_time > 5 {
+                e.attacking = false
+                e.to_deal_damage = true
+            }
+            e.pos += e.velocity * dt * e.attack_speed_slow_down
         }
-        #partial switch e.state {
-        case .Idle: {
-            FRAMES :: 10
-            e.frame_time += dt * FRAMES
-            if e.frame_time > FRAMES { // frames
-                fmt.println("over frames", e.frame_time, FRAMES)
-                e.frame_time -= FRAMES
-            }
-            index := math.floor(e.frame_time) * IMAGE_WIDTH
-            i := 1
-            if e.direction == .Left || e.direction == .Up {
-                index += IMAGE_WIDTH
-                i = -1
-            }
-            e.source_rect.x = index
-            e.source_rect.width = f32(IMAGE_WIDTH * i)
-        }
-        case .Running: {
-            FRAMES :: 16
-            e.frame_time += dt * FRAMES
-            if e.frame_time > FRAMES { // frames
-                fmt.println("over frames", e.frame_time, FRAMES)
-                e.frame_time -= FRAMES
-            }
-            index := math.floor(e.frame_time) * IMAGE_WIDTH
-            i := 1
-            if e.direction == .Left || e.direction == .Up {
-                index += IMAGE_WIDTH
-                i = -1
-            }
-            e.source_rect.x = index
-            e.source_rect.width = f32(IMAGE_WIDTH * i)
 
+        e.draw_rect.x, e.draw_rect.y = e.pos.x, e.pos.y
+        if e.velocity.y != 0 {
+            if e.velocity.y > 0 {
+                e.direction = EntityDirection.Down
+            } else {
+                e.direction = EntityDirection.Up
+            }
         }
+        if e.velocity.x != 0 {
+            if e.velocity.x > 0 {
+                e.direction = EntityDirection.Right
+            } else {
+                e.direction = EntityDirection.Left
+            }
         }
+        if e.to_deal_damage {
+            // attack entities in range
+            entity_attack(s, e)
+            e.to_deal_damage = false
+        }
+        e.frame_time += dt * FPS
+        draw_update_entity_animation(e, dt)
     }
 }
-draw :: proc(s: ^State, idle_texture: rl.Texture2D) {
+
+draw_update_entity_animation :: proc(e: ^Entity, dt: f32) {
+    if e.previous_state != e.state {
+        e.previous_state = e.state
+        e.frame_time = 0
+    }
+    #partial switch e.state {
+    case .Idle:
+        FRAMES :: 10
+        if e.frame_time > FRAMES { // frames
+            // fmt.println("over frames", e.frame_time, FRAMES)
+            e.frame_time -= FRAMES
+        }
+        index := math.floor(e.frame_time) * IMAGE_WIDTH
+        i := 1
+        if e.direction == .Left || e.direction == .Up {
+            index += IMAGE_WIDTH
+            i = -1
+        }
+        e.source_rect.x = index
+        e.source_rect.width = f32(IMAGE_WIDTH * i)
+
+    case .Running:
+        FRAMES :: 16
+        if e.frame_time > FRAMES { // frames
+            // fmt.println("over frames", e.frame_time, FRAMES)
+            e.frame_time -= FRAMES
+        }
+        index := math.floor(e.frame_time) * IMAGE_WIDTH
+        i := 1
+        if e.direction == .Left || e.direction == .Up {
+            index += IMAGE_WIDTH
+            i = -1
+        }
+        e.source_rect.x = index
+        e.source_rect.width = f32(IMAGE_WIDTH * i)
+
+    case .Attacking:
+        FRAMES :: 7
+        if e.frame_time > FRAMES { // frames
+            //fmt.println("over frames (in attack state)", e.frame_time, FRAMES)
+            e.frame_time -= FRAMES
+            e.in_attack_animation = false
+        } else {
+            e.in_attack_animation = true
+        }
+        index := math.floor(e.frame_time) * IMAGE_WIDTH
+        i := 1
+        if e.direction == .Left || e.direction == .Up {
+            index += IMAGE_WIDTH
+            i = -1
+        }
+        e.source_rect.x = index
+        e.source_rect.width = f32(IMAGE_WIDTH * i)
+    }
+}
+draw :: proc(s: ^State) {
     player := s.player
     rl.BeginDrawing();
 
@@ -190,10 +267,6 @@ main :: proc() {
     rl.InitWindow(800, 500, "Hello from Odin!!!");
     rl.SetTargetFPS(60);
 
-    // allocate memory for textures
-    idle_texture := rl.LoadTexture("assets/idle.png")
-    running_texture := rl.LoadTexture("assets/run.png")
-
     // init state
     s := State{}
     p := Player{
@@ -204,10 +277,15 @@ main :: proc() {
         draw_rect={width=96, height=96},
         // to reflect just use negative width and height
         source_rect={width=96, height=96, x=0, y=0},
-        fps = 10,
         
         // state
         state = .Idle,
+
+        // attacking
+        attacking = false,
+        attack_speed_slow_down = 0.25,
+        attack_index = 0,
+        attack_range = 32,
     }
     test_entity := Entity{
         pos =  {300,300},
@@ -218,16 +296,22 @@ main :: proc() {
         draw_rect={width=96, height=96},
         // to reflect just use negative width and height
         source_rect={width=96, height=96, x=0, y=0},
-        fps = 10,
         // state
         state = .Idle,
+
+        // attacking
+        attacking = false,
+        attack_speed_slow_down = 0.25,
+        attack_index = 0,
+        attack_range = 32,
     }
 
-    s.textures[.PlayerIdle] = idle_texture
-    s.textures[.PlayerRunning] = running_texture
     s.player = &p
     s.entities[0] = &p
     s.entities[1] = &test_entity
+    state_add_texture(&s, "assets/idle.png", .PlayerIdle)
+    state_add_texture(&s, "assets/run.png", .PlayerRunning)
+    state_add_texture(&s, "assets/attack.png", .PlayerAttack)
 
     for !rl.WindowShouldClose() && !s.quit {
         // fmt.println(p)
@@ -235,13 +319,11 @@ main :: proc() {
 
         handle_events(&s)
         update(&s, dt)
-        draw(&s, idle_texture);
+        draw(&s);
     }
 
     // free memory
-    for _, texture in s.textures {
-        rl.UnloadTexture(texture);
-    }
+    free_state(&s)
     rl.CloseWindow();
     fmt.println("End main");
 }
