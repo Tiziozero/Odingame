@@ -288,9 +288,8 @@ draw :: proc(s: ^State) {
             // body center 2 thirds down the texture
             e.pos.y - e.draw_rect.height / 3 * 2,
         }
-        rl.DrawRectangleRec(e.body, rl.RED)
-        rl.DrawCircleV(e.pos, f32(e.attack_range), rl.BLUE);
-        // rl.DrawCircleV(e.pos, 2, rl.WHITE);
+        rl.DrawRectangleRec(e.body, rl.Color{255,112, 10, 58});        // rl.DrawCircleV(e.pos, 2, rl.WHITE);
+        rl.DrawCircleV(e.pos, f32(e.attack_range), rl.Color{0,112, 198, 58});        // rl.DrawCircleV(e.pos, 2, rl.WHITE);
     }
     for e in entities {
         animation_index: TextureMapID
@@ -310,14 +309,14 @@ draw :: proc(s: ^State) {
             draw_v, {255,255,255,255});
     }
     for e in entities {
-        rl.DrawCircleV(e.pos, 2, rl.WHITE);
+        rl.DrawCircleV(e.pos, 2, rl.Color{0,112, 198, 58});
     }
     delete(entities)
 
     rl.EndDrawing();
 }
 
-main :: proc() {
+main_1 :: proc() {
     fmt.println("Start main")
 
     // init raylib
@@ -390,4 +389,7 @@ main :: proc() {
     rl.CloseWindow();
 
     fmt.println("End main");
+}
+main :: proc() {
+    network_test()
 }
