@@ -29,6 +29,7 @@ TextureMapID :: enum {
 
 Entity :: struct {
     // entity position
+    // center of entity
     pos: rl.Vector2,
     velocity: rl.Vector2,
     speed: f32,
@@ -73,8 +74,11 @@ State :: struct {
 }
 
 damage_entity :: proc(e: ^Entity, dmg: f32) {
+    fmt.println("Damagin entity:", e)
+    fmt.println("Before:", e.hp)
     d := dmg - e.defpts
     e.hp -= d
+    fmt.println("After :", e.hp)
 }
 get_attack_damage :: proc(e: ^Entity) -> f32 {
     
@@ -82,9 +86,19 @@ get_attack_damage :: proc(e: ^Entity) -> f32 {
 }
 entity_attack :: proc(s: ^State, e: ^Entity) {
     for _, ent in s.entities {
-        d := e.pos - ent.pos
-        if math.sqrt(d.x*d.x-d.y-d.y) < f32(e.attack_range) {
-            fmt.println("Entity attacking", d, math.sqrt(d.x*d.x-d.y-d.y), e.attack_range)
+        if ent == e {
+            continue
+        }
+        d := rl.Vector2{
+            e.pos.x- ent.pos.x,
+            e.pos.y- ent.pos.y,
+        }
+        if math.sqrt(d.x*d.x+d.y*d.y) < f32(e.attack_range) {
+            fmt.println("Entity attacking",
+                e.pos, ent.pos,
+                e.pos.x- ent.pos.x,
+                e.pos.y- ent.pos.y,
+                d, math.sqrt(d.x*d.x+d.y*d.y), e.attack_range)
             damage_entity(ent, get_attack_damage(e))
         }
     }
@@ -159,7 +173,10 @@ update :: proc(s: ^State, dt: f32) {
             e.pos += e.velocity * dt * e.attack_speed_slow_down
         }
 
-        e.draw_rect.x, e.draw_rect.y = e.pos.x, e.pos.y
+        // e.pos.x - e.draw_rect.width / 2,
+        // body center 2 thirds down the texture
+        // e.pos.y - e.draw_rect.height / 3 * 2,
+        e.body.x, e.body.y = e.pos.x - e.body.width / 2, e.pos.y - e.body.height / 2
         if e.velocity.y != 0 {
             if e.velocity.y > 0 {
                 e.direction = EntityDirection.Down
@@ -239,12 +256,43 @@ draw_update_entity_animation :: proc(e: ^Entity, dt: f32) {
         e.source_rect.width = f32(IMAGE_WIDTH * i)
     }
 }
+
+sort_entities :: proc(entities: [dynamic]^Entity) {
+    for i in 1..<len(entities) {
+        p := entities[i-1].pos.y
+        n := entities[i].pos.y
+        if p > n {
+            t := entities[i-1]
+            entities[i-1] = entities[i]
+            entities[i] = t
+        }
+        
+    }
+}
+
 draw :: proc(s: ^State) {
     player := s.player
+
+    entities: [dynamic]^Entity
+    for _, e in s.entities {
+        append(&entities, e)
+    }
+    sort_entities(entities)
     rl.BeginDrawing();
 
     rl.ClearBackground(rl.BLACK);
-    for _, e in s.entities {
+    // Debug
+    for e in entities {
+        draw_v := rl.Vector2{
+            e.pos.x - e.draw_rect.width / 2,
+            // body center 2 thirds down the texture
+            e.pos.y - e.draw_rect.height / 3 * 2,
+        }
+        rl.DrawRectangleRec(e.body, rl.RED)
+        rl.DrawCircleV(e.pos, f32(e.attack_range), rl.BLUE);
+        // rl.DrawCircleV(e.pos, 2, rl.WHITE);
+    }
+    for e in entities {
         animation_index: TextureMapID
         #partial switch e.state {
         case .Running: animation_index = .PlayerRunning
@@ -253,9 +301,18 @@ draw :: proc(s: ^State) {
         case: animation_index = .PlayerIdle
         }
 
+        draw_v := rl.Vector2{
+            e.pos.x - e.draw_rect.width / 2,
+            // body center 2 thirds down the texture
+            e.pos.y - e.draw_rect.height / 3 * 2,
+        }
         rl.DrawTextureRec(s.textures[animation_index], e.source_rect,
-            e.pos, {255,255,255,255});
+            draw_v, {255,255,255,255});
     }
+    for e in entities {
+        rl.DrawCircleV(e.pos, 2, rl.WHITE);
+    }
+    delete(entities)
 
     rl.EndDrawing();
 }
@@ -285,7 +342,10 @@ main :: proc() {
         attacking = false,
         attack_speed_slow_down = 0.25,
         attack_index = 0,
-        attack_range = 32,
+        attack_range = 48,
+        atkpts = 60,
+        defpts = 10,
+        hp = 300,
     }
     test_entity := Entity{
         pos =  {300,300},
@@ -303,7 +363,10 @@ main :: proc() {
         attacking = false,
         attack_speed_slow_down = 0.25,
         attack_index = 0,
-        attack_range = 32,
+        attack_range = 48,
+        atkpts = 60,
+        defpts = 10,
+        hp = 300,
     }
 
     s.player = &p
@@ -325,5 +388,6 @@ main :: proc() {
     // free memory
     free_state(&s)
     rl.CloseWindow();
+
     fmt.println("End main");
 }
