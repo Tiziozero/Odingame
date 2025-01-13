@@ -1,0 +1,3 @@
+watchdog==6.0.0
+hupper==1.12.1
+

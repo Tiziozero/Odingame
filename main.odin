@@ -391,5 +391,5 @@ main_1 :: proc() {
     fmt.println("End main");
 }
 main :: proc() {
-    network_test()
+    fmt.println(network_test())
 }
