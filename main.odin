@@ -240,9 +240,12 @@ draw_update_entity_animation :: proc(s: ^State, e: ^Entity, dt: f32) {
     e.source_rect.width = img_width * f32(i)
 
 
-    e.draw_rect.x = e.pos.x - e.draw_rect.width / 2
     // center first and then addd offset from 
-    e.draw_rect.y = e.pos.y - e.draw_rect.height / 2 - e.draw_rect.height / 2 + e.body.height / 2;
+    // offsets are relative to center position
+    datajson_x_offset := 0;
+    e.draw_rect.x = e.pos.x - e.draw_rect.width / 2;
+    datajson_y_offset := - e.draw_rect.height / 2 + e.body.height / 2;
+    e.draw_rect.y = e.pos.y - e.draw_rect.height / 2 + datajson_y_offset;
 }
 
 sort_entities :: proc(entities: [dynamic]^Entity) {
