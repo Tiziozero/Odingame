@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:math"
 import "core:mem"
 import "core:time"
+import "src"
 
 import rl "vendor:raylib"
 
@@ -20,11 +21,6 @@ EntityState :: enum {
     Idle,
     Running,
     Attacking,
-}
-TextureMapID :: enum {
-    PlayerIdle,
-    PlayerRunning,
-    PlayerAttack,
 }
 
 Entity :: struct {
@@ -68,7 +64,7 @@ Player :: struct {
 }
 State :: struct {
     player: ^Player,
-    textures: map[TextureMapID]rl.Texture2D,
+    textures: map[src.TextureMapID]rl.Texture2D,
     entities: map[int]^Entity,
     quit: bool,
 }
@@ -84,7 +80,21 @@ get_attack_damage :: proc(e: ^Entity) -> f32 {
     
     return e.atkpts;
 }
-entity_attack :: proc(s: ^State, e: ^Entity) {
+entity_attack :: proc(e: ^Entity) {
+    if !e.attacking {
+        e.state = .Attacking;
+
+        // reset  animations
+        e.attacking = true
+        e.frame_time = 0;
+        e.in_attack_animation = true
+        fmt.println(e, " is Attacking")
+    } else {
+        fmt.println(e, " is already attacking")
+    }
+
+}
+entity_attack_entities :: proc(s: ^State, e: ^Entity) {
     for _, ent in s.entities {
         if ent == e {
             continue
@@ -104,7 +114,7 @@ entity_attack :: proc(s: ^State, e: ^Entity) {
     }
 }
 
-state_add_texture :: proc(s: ^State, path: cstring, id: TextureMapID) {
+state_add_texture :: proc(s: ^State, path: cstring, id: src.TextureMapID) {
     t_ := rl.LoadTexture(path)
     s.textures[id] = t_
 }
@@ -142,10 +152,7 @@ handle_events :: proc(s: ^State) {
         #partial switch k {
         case rl.KeyboardKey.Q: s.quit = true
         case rl.KeyboardKey.L: {
-            player.state = .Attacking;
-            player.attacking = true
-            player.in_attack_animation = true
-            fmt.println("Attacking")
+            entity_attack(player)
         }
         case : {} // default case
         }
@@ -166,6 +173,7 @@ update :: proc(s: ^State, dt: f32) {
             e.pos += e.velocity * dt
         } else {
             e.state = .Attacking
+            // hard coded
             if e.frame_time > 5 {
                 e.attacking = false
                 e.to_deal_damage = true
@@ -193,7 +201,7 @@ update :: proc(s: ^State, dt: f32) {
         }
         if e.to_deal_damage {
             // attack entities in range
-            entity_attack(s, e)
+            entity_attack_entities(s, e)
             e.to_deal_damage = false
         }
         e.frame_time += dt * FPS
@@ -258,15 +266,20 @@ draw_update_entity_animation :: proc(e: ^Entity, dt: f32) {
 }
 
 sort_entities :: proc(entities: [dynamic]^Entity) {
-    for i in 1..<len(entities) {
-        p := entities[i-1].pos.y
-        n := entities[i].pos.y
-        if p > n {
-            t := entities[i-1]
-            entities[i-1] = entities[i]
-            entities[i] = t
+    changed := true;
+    for changed {
+        changed = false;
+        for i in 1..<len(entities) {
+            p := entities[i-1].pos.y
+            n := entities[i].pos.y
+            if p > n {
+                t := entities[i-1]
+                entities[i-1] = entities[i]
+                entities[i] = t
+                changed = true;
+            }
+
         }
-        
     }
 }
 
@@ -292,7 +305,7 @@ draw :: proc(s: ^State) {
         rl.DrawCircleV(e.pos, f32(e.attack_range), rl.Color{0,112, 198, 58});        // rl.DrawCircleV(e.pos, 2, rl.WHITE);
     }
     for e in entities {
-        animation_index: TextureMapID
+        animation_index: src.TextureMapID
         #partial switch e.state {
         case .Running: animation_index = .PlayerRunning
         case .Idle: animation_index = .PlayerIdle
@@ -371,9 +384,9 @@ main_1 :: proc() {
     s.player = &p
     s.entities[0] = &p
     s.entities[1] = &test_entity
-    state_add_texture(&s, "assets/idle.png", .PlayerIdle)
-    state_add_texture(&s, "assets/run.png", .PlayerRunning)
-    state_add_texture(&s, "assets/attack.png", .PlayerAttack)
+    state_add_texture(&s, "assets/samurai/idle.png", .PlayerIdle)
+    state_add_texture(&s, "assets/samurai/run.png", .PlayerRunning)
+    state_add_texture(&s, "assets/samurai/attack.png", .PlayerAttack)
 
     for !rl.WindowShouldClose() && !s.quit {
         // fmt.println(p)
@@ -391,5 +404,6 @@ main_1 :: proc() {
     fmt.println("End main");
 }
 main :: proc() {
-    fmt.println(network_test())
+    main_1()
+    // fmt.println(network_test())
 }
