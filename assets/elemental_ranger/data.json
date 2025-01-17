@@ -1,0 +1,14 @@
+{
+  "name": "Ranger",
+  "body": {
+    "width": 40,
+    "height": 48,
+    "x": 0,
+    "y": -40
+  },
+  "sprite": {
+    "width": 288,
+    "height": 128
+  },
+  "desc": "body x and y describe offset relative to center",
+}

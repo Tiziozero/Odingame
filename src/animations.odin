@@ -1,11 +1,16 @@
 package src
 
 import rl "vendor:raylib"
+// adjust later
+EntityState :: enum {
+    Idle,
+    Running,
+    Attacking,
+}
 
 TextureMapID :: enum {
-    PlayerIdle,
-    PlayerRunning,
-    PlayerAttack,
+    Samuri,
+    Ranger,
 }
 
 SS_Animation_Data :: struct {
@@ -14,6 +19,7 @@ SS_Animation_Data :: struct {
 }
 SpriteSheet :: struct {
     texture: rl.Texture2D,
+    animation_info: map[EntityState]SS_Animation_Data,
     sprite_w: int,
     sprite_h: int,
     rows: int,

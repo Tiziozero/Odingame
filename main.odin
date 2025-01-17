@@ -7,20 +7,15 @@ import "core:time"
 import "src"
 
 import rl "vendor:raylib"
-
-IMAGE_WIDTH :: 96
-IMAGE_HEIGHT :: 96
+ATTACK_FRAME :: 5
+img_width :: 288
+img_height :: 128
 FPS :: 10
 EntityDirection :: enum {
     Up,
     Down,
     Left,
     Right,
-}
-EntityState :: enum {
-    Idle,
-    Running,
-    Attacking,
 }
 
 Entity :: struct {
@@ -50,10 +45,12 @@ Entity :: struct {
     attack_range: int,
 
     // entity state
-    state: EntityState,
-    previous_state: EntityState,
+    state: src.EntityState,
+    previous_state: src.EntityState,
     hp: f32,
     // animations
+    // for render
+    texture_map_id: src.TextureMapID,
     direction: EntityDirection,
     draw_rect: rl.Rectangle,
     source_rect: rl.Rectangle,
@@ -64,7 +61,7 @@ Player :: struct {
 }
 State :: struct {
     player: ^Player,
-    textures: map[src.TextureMapID]rl.Texture2D,
+    textures: map[src.TextureMapID]src.SpriteSheet,
     entities: map[int]^Entity,
     quit: bool,
 }
@@ -114,14 +111,15 @@ entity_attack_entities :: proc(s: ^State, e: ^Entity) {
     }
 }
 
+// TODO: implement with proper handling
 state_add_texture :: proc(s: ^State, path: cstring, id: src.TextureMapID) {
-    t_ := rl.LoadTexture(path)
-    s.textures[id] = t_
+    // t_ := rl.LoadTexture(path)
+    // s.textures[id] = t_
 }
 free_state :: proc(s: ^State) {
-    for id, texture in s.textures {
+    for id, ss in s.textures {
         fmt.println("Freed:", id);
-        rl.UnloadTexture(texture);
+        rl.UnloadTexture(ss.texture);
     }
     // free maps and arrays
     delete(s.textures)
@@ -174,7 +172,7 @@ update :: proc(s: ^State, dt: f32) {
         } else {
             e.state = .Attacking
             // hard coded
-            if e.frame_time > 5 {
+            if e.frame_time > ATTACK_FRAME {
                 e.attacking = false
                 e.to_deal_damage = true
             }
@@ -205,64 +203,46 @@ update :: proc(s: ^State, dt: f32) {
             e.to_deal_damage = false
         }
         e.frame_time += dt * FPS
-        draw_update_entity_animation(e, dt)
+        draw_update_entity_animation(s, e, dt)
     }
 }
 
-draw_update_entity_animation :: proc(e: ^Entity, dt: f32) {
+draw_update_entity_animation :: proc(s: ^State, e: ^Entity, dt: f32) {
     if e.previous_state != e.state {
         e.previous_state = e.state
         e.frame_time = 0
     }
-    #partial switch e.state {
-    case .Idle:
-        FRAMES :: 10
-        if e.frame_time > FRAMES { // frames
-            // fmt.println("over frames", e.frame_time, FRAMES)
-            e.frame_time -= FRAMES
-        }
-        index := math.floor(e.frame_time) * IMAGE_WIDTH
-        i := 1
-        if e.direction == .Left || e.direction == .Up {
-            index += IMAGE_WIDTH
-            i = -1
-        }
-        e.source_rect.x = index
-        e.source_rect.width = f32(IMAGE_WIDTH * i)
+    frames : f32= f32(s.textures[.Ranger].animation_info[e.state].length)
+    ss_row : f32= f32(s.textures[.Ranger].animation_info[e.state].row)
+    img_width : f32 = f32(s.textures[.Ranger].sprite_w)
+    img_height : f32 = f32(s.textures[.Ranger].sprite_h)
+    fmt.println(frames, ss_row, img_width, img_height)
+    fmt.println(math.floor(e.frame_time), math.floor(frames), math.floor(e.frame_time) >= math.floor(frames), e.frame_time)
 
-    case .Running:
-        FRAMES :: 16
-        if e.frame_time > FRAMES { // frames
-            // fmt.println("over frames", e.frame_time, FRAMES)
-            e.frame_time -= FRAMES
-        }
-        index := math.floor(e.frame_time) * IMAGE_WIDTH
-        i := 1
-        if e.direction == .Left || e.direction == .Up {
-            index += IMAGE_WIDTH
-            i = -1
-        }
-        e.source_rect.x = index
-        e.source_rect.width = f32(IMAGE_WIDTH * i)
-
-    case .Attacking:
-        FRAMES :: 7
-        if e.frame_time > FRAMES { // frames
-            //fmt.println("over frames (in attack state)", e.frame_time, FRAMES)
-            e.frame_time -= FRAMES
+    // frames - 1 to have it within bounds
+    if math.floor(e.frame_time) >= math.floor(frames - 1) {
+        fmt.println("over frames", e.frame_time, frames)
+        if e.state == .Attacking {
+            fmt.println("over frames (in attack state)", e.frame_time, frames)
             e.in_attack_animation = false
-        } else {
-            e.in_attack_animation = true
         }
-        index := math.floor(e.frame_time) * IMAGE_WIDTH
-        i := 1
-        if e.direction == .Left || e.direction == .Up {
-            index += IMAGE_WIDTH
-            i = -1
-        }
-        e.source_rect.x = index
-        e.source_rect.width = f32(IMAGE_WIDTH * i)
+        e.frame_time -= frames - 1
     }
+    x_index := math.floor(e.frame_time) * img_width
+    y_index := math.floor(ss_row) * img_height
+    i := 1
+    if e.direction == .Left || e.direction == .Up {
+        x_index += img_width
+        i = -1
+    }
+    e.source_rect.x = x_index
+    e.source_rect.y = y_index
+    e.source_rect.width = img_width * f32(i)
+
+
+    e.draw_rect.x = e.pos.x - e.draw_rect.width / 2
+    // center first and then addd offset from 
+    e.draw_rect.y = e.pos.y - e.draw_rect.height / 2 - e.draw_rect.height / 2 + e.body.height / 2;
 }
 
 sort_entities :: proc(entities: [dynamic]^Entity) {
@@ -296,33 +276,16 @@ draw :: proc(s: ^State) {
     rl.ClearBackground(rl.BLACK);
     // Debug
     for e in entities {
-        draw_v := rl.Vector2{
-            e.pos.x - e.draw_rect.width / 2,
-            // body center 2 thirds down the texture
-            e.pos.y - e.draw_rect.height / 3 * 2,
-        }
+        rl.DrawRectangleRec(e.draw_rect, {255,255,255,255});
         rl.DrawRectangleRec(e.body, rl.Color{255,112, 10, 58});        // rl.DrawCircleV(e.pos, 2, rl.WHITE);
         rl.DrawCircleV(e.pos, f32(e.attack_range), rl.Color{0,112, 198, 58});        // rl.DrawCircleV(e.pos, 2, rl.WHITE);
     }
     for e in entities {
-        animation_index: src.TextureMapID
-        #partial switch e.state {
-        case .Running: animation_index = .PlayerRunning
-        case .Idle: animation_index = .PlayerIdle
-        case .Attacking: animation_index = .PlayerAttack
-        case: animation_index = .PlayerIdle
-        }
-
-        draw_v := rl.Vector2{
-            e.pos.x - e.draw_rect.width / 2,
-            // body center 2 thirds down the texture
-            e.pos.y - e.draw_rect.height / 3 * 2,
-        }
-        rl.DrawTextureRec(s.textures[animation_index], e.source_rect,
-            draw_v, {255,255,255,255});
+        rl.DrawTextureRec(s.textures[e.texture_map_id].texture, e.source_rect,
+            {e.draw_rect.x, e.draw_rect.y}, {255,255,255,255});
     }
     for e in entities {
-        rl.DrawCircleV(e.pos, 2, rl.Color{0,112, 198, 58});
+        rl.DrawCircleV(e.pos, 4, rl.Color{255,255, 255, 255});
     }
     delete(entities)
 
@@ -338,14 +301,36 @@ main_1 :: proc() {
 
     // init state
     s := State{}
+
+    t_ := rl.LoadTexture("assets/elemental_ranger/Elementals_leaf_ranger_288x128_SpriteSheet.png")
+
+    ss := src.SpriteSheet{}
+    ss.texture = t_
+    ss.sprite_w = 288
+    ss.sprite_h = 128
+    ss.rows = 17
+    ss.cols = 22
+
+    a := src.SS_Animation_Data {
+        row = 0, length = 12,
+    }
+    ss.animation_info[.Idle] = a
+    b := src.SS_Animation_Data {
+        row = 1, length = 10,
+    }
+    ss.animation_info[.Running] = b
+
+    s.textures[.Ranger] = ss
+    // fmt.println(s)
     p := Player{
         // position
-        body={width=32, height=32},
+        pos={200,300},
+        body={width=40, height=48},
         speed=200,
         // render
-        draw_rect={width=96, height=96},
+        draw_rect={width=f32(ss.sprite_w), height=f32(ss.sprite_h)},
         // to reflect just use negative width and height
-        source_rect={width=96, height=96, x=0, y=0},
+        source_rect={width=f32(ss.sprite_w), height=f32(ss.sprite_h), x=0, y=0},
         
         // state
         state = .Idle,
@@ -358,16 +343,20 @@ main_1 :: proc() {
         atkpts = 60,
         defpts = 10,
         hp = 300,
+
+        //animation
+        texture_map_id = .Ranger,
     }
     test_entity := Entity{
-        pos =  {300,300},
         // position
-        body={width=32, height=32},
+        pos={400,300},
+        body={width=40, height=48},
         speed=200,
         // render
-        draw_rect={width=96, height=96},
+        draw_rect={width=f32(ss.sprite_w), height=f32(ss.sprite_h)},
         // to reflect just use negative width and height
-        source_rect={width=96, height=96, x=0, y=0},
+        source_rect={width=f32(ss.sprite_w), height=f32(ss.sprite_h), x=0, y=0},
+        
         // state
         state = .Idle,
 
@@ -379,14 +368,16 @@ main_1 :: proc() {
         atkpts = 60,
         defpts = 10,
         hp = 300,
+        texture_map_id = .Ranger,
     }
 
     s.player = &p
     s.entities[0] = &p
-    s.entities[1] = &test_entity
-    state_add_texture(&s, "assets/samurai/idle.png", .PlayerIdle)
-    state_add_texture(&s, "assets/samurai/run.png", .PlayerRunning)
-    state_add_texture(&s, "assets/samurai/attack.png", .PlayerAttack)
+    // s.entities[1] = &test_entity
+    // state_add_texture(&s, "assets/samurai/idle.png", .PlayerIdle)
+    // state_add_texture(&s, "assets/samurai/run.png", .PlayerRunning)
+    // state_add_texture(&s, "assets/samurai/attack.png", .PlayerAttack)
+
 
     for !rl.WindowShouldClose() && !s.quit {
         // fmt.println(p)

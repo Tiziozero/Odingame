@@ -1,0 +1,7 @@
+• add loading data.json per sprite sheet
+• add entity state etc in a separate mopdule
+• create proper documentation
+• clarify attack logic
+• add attacks
+• add chained attacks
+• add server
