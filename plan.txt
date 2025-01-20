@@ -1,0 +1,16 @@
+plan
+
+entity state:
+    • entity can not be in dialoge and attack or move at the same time
+
+    • can be:
+        • idle - not moving and not attacking and not in dialoge
+        • running - moving and not attacking
+        • attacking - attacking
+        • off - in dialoge
+
+entity animation:
+    • if in dialouge - dialouge animation
+    • if attacking - attack
+    • if moveing and not attacking - move
+    • if not moving and not attacking and not in dialouge - idle
