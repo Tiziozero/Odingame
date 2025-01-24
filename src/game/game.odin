@@ -14,6 +14,7 @@ import rl "vendor:raylib"
 
 
 FPS :: 10
+/*
 
 
 damage_entity :: proc(e: ^entity.Entity, dmg: f32) {
@@ -40,6 +41,11 @@ entity_attack :: proc(e: ^entity.Entity) {
         fmt.println(e, " is already attacking")
     }
 
+}
+entity_get_attack_end ::  proc(s: ^state.State, e: ^entity.Entity) -> bool {
+
+
+    return false
 }
 entity_attack_entities :: proc(s: ^state.State, e: ^entity.Entity) {
     for _, ent in s.entities {
@@ -163,12 +169,21 @@ update :: proc(s: ^state.State, dt: f32) {
                 e.direction = game_common.EntityDirection.Left
             }
         }
+        // update entity frames
+        e.frame_time += dt * FPS
+        // check if attack is finished
+        if math.floor(e.frame_time) == entity_get_attack_end(e) {
+            e.attacking = false
+        }
+
         if e.to_deal_damage {
             // attack entities in range
             entity_attack_entities(s, e)
             e.to_deal_damage = false
         }
-        e.frame_time += dt * FPS
+
+
+
         draw_update_entity_animation(s, e, dt)
 
         e.velocity = {0, 0}
@@ -262,7 +277,6 @@ draw :: proc(s: ^state.State) {
 
     rl.EndDrawing();
 }
-
 main_1 :: proc() {
     fmt.println("Start main")
 
@@ -370,3 +384,5 @@ main_1 :: proc() {
 
     fmt.println("End main");
 }
+*/
+main_i :: proc() {}
