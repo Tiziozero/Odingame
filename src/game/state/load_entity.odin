@@ -4,23 +4,74 @@ import "core:encoding/json"
 import "core:os"
 import "core:io"
 import "core:fmt"
+import entity_module "../entity"
+import animations "../animations"
 
-EntityData :: struct {
 
+LoadingError :: enum {
+    InvalidFormat,
+    FailedToParse,
+    FailedToOpenFile,
 }
 
 
-
-parse_entity :: proc(bytes: []byte) -> (entity:EntityData, err:json.Unmarshal_Error){
-    object : map[string]any
+parse_entity :: proc(bytes: []byte) -> (entity:entity_module.Entity_Data, err:LoadingError){
+    using fmt;
+    data : json.Object
+    sprite_sheet : json.Object
+    x_offset, y_offset, width, height: f64
     if v, err := json.parse(bytes, parse_integers = true); err != nil {
         fmt.eprintln("Failed to unmarshal json:", err)
-        return {}, err
+        return {}, LoadingError.FailedToParse
     } else {
-        data := v.(json.Object)
-        fmt.println(data)
-        fmt.println(data["body"])
+        ok: bool
+        data, ok = v.(json.Object)
+        if !ok {
+            return {}, LoadingError.InvalidFormat
+        }
     }
+
+    body, ok := data["body"].(json.Object)
+    if !ok {
+        eprintln("Failed to find body in configuration/invalid format")
+        return entity, LoadingError.InvalidFormat
+    }
+    sprite_sheet, ok = data["sprite"].(json.Object)
+    if !ok {
+        eprintln("Failed to find sprite in configuration/invalid format")
+        return entity, LoadingError.InvalidFormat
+    }
+
+    // body
+    x_offset, ok = body["x"].(json.Float)
+    if !ok {
+        eprintln("Failed to find body/x_offset in configuration/invalid format")
+        return entity, LoadingError.InvalidFormat
+    }
+    y_offset, ok = body["y"].(json.Float)
+    if !ok {
+        eprintln("Failed to find body/y_offset in configuration/invalid format")
+        return entity, LoadingError.InvalidFormat
+    }
+
+    width, ok = body["width"].(json.Float)
+    if !ok {
+        eprintln("Failed to find body/width in configuration/invalid format")
+        return entity, LoadingError.InvalidFormat
+    }
+    height, ok = body["height"].(json.Float)
+    if !ok {
+        eprintln("Failed to find body/height in configuration/invalid format")
+        return entity, LoadingError.InvalidFormat
+    }
+
+    // sprite data
+
+
+
+    ss := animations.SpriteSheet{}
+
+
 
     return {}, nil
 }

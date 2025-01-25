@@ -50,6 +50,7 @@ Entity_Data :: struct {
     attacks: []Attack_Data,
     texture_map_id: animations.TextureMapID,
     attack_speed_slow_down: f32,
+    sprite_sheet: animations.SpriteSheet,
 }
 Attack_Data :: struct {
     attack_range: int,

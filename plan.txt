@@ -7,10 +7,12 @@ entity state:
         • idle - not moving and not attacking and not in dialoge
         • running - moving and not attacking
         • attacking - attacking
-        • off - in dialoge
 
 entity animation:
-    • if in dialouge - dialouge animation
-    • if attacking - attack
-    • if moveing and not attacking - move
-    • if not moving and not attacking and not in dialouge - idle
+    entity of onetity id
+    entity id corresponds to a enum/type in a map in state
+        • map of type Entity_Data
+        • Entity data contains sprite sheet
+            • which contains animation info that can be 
+              indexed via animation_index enum
+        • contains other data specific to that entity type

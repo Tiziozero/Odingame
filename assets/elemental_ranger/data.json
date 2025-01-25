@@ -10,5 +10,12 @@
     "width": 288,
     "height": 128
   },
-  "desc": "body x and y describe offset relative to center",
+  "animations": {
+    "idle": {},
+    "run": {},
+    "attacks": {
+      "base": {}
+    }
+  },
+  "desc": "body x and y describe offset relative to center"
 }

@@ -14,8 +14,6 @@ import rl "vendor:raylib"
 
 
 FPS :: 10
-/*
-
 
 damage_entity :: proc(e: ^entity.Entity, dmg: f32) {
     fmt.println("Damagin entity:", e)
@@ -132,10 +130,6 @@ update :: proc(s: ^state.State, dt: f32) {
         if e.attacking {
             attacking = true
         }
-        if e.in_dialoge {
-            dialoge = true
-        }
-
         if !moving && !attacking && !dialoge {
             e.state = .Idle
         }
@@ -172,7 +166,7 @@ update :: proc(s: ^state.State, dt: f32) {
         // update entity frames
         e.frame_time += dt * FPS
         // check if attack is finished
-        if math.floor(e.frame_time) == entity_get_attack_end(e) {
+        if entity_get_attack_end(s, e) {
             e.attacking = false
         }
 
@@ -384,5 +378,3 @@ main_1 :: proc() {
 
     fmt.println("End main");
 }
-*/
-main_i :: proc() {}
