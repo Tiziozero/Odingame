@@ -46,8 +46,24 @@ Entity :: struct {
     items: []Item,
 }
 
+EntityAttacks :: enum {
+    Ult,
+    NormalAttack1,
+    NormalAttack2,
+    NormalAttack3,
+    NormalAttack4,
+    NormalAttack5,
+    NormalAttack6,
+    NormalAttack7,
+    NormalAttack8,
+    Skill1,
+    Skill2,
+    Skill3,
+}
+
 Entity_Data :: struct {
-    attacks: []Attack_Data,
+    // separate array for attacks
+    attacks: map[EntityAttacks]Attack_Data,
     texture_map_id: animations.TextureMapID,
     attack_speed_slow_down: f32,
     sprite_sheet: animations.SpriteSheet,
@@ -57,4 +73,6 @@ Attack_Data :: struct {
     /* "frame" ( for reference ) at which attack ends and
     entity is no longer in attack */
     attack_time: int, 
+    // when attack ends and deals damage
+    attack_end: int,
 }

@@ -7,6 +7,7 @@ entity state:
         • idle - not moving and not attacking and not in dialoge
         • running - moving and not attacking
         • attacking - attacking
+    • entity attacks end when they deal damage. Animation can finish later
 
 entity animation:
     entity of onetity id

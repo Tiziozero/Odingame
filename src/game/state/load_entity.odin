@@ -19,6 +19,7 @@ parse_entity :: proc(bytes: []byte) -> (entity:entity_module.Entity_Data, err:Lo
     using fmt;
     data : json.Object
     sprite_sheet : json.Object
+    animations_data : json.Object
     x_offset, y_offset, width, height: f64
     if v, err := json.parse(bytes, parse_integers = true); err != nil {
         fmt.eprintln("Failed to unmarshal json:", err)
@@ -37,6 +38,11 @@ parse_entity :: proc(bytes: []byte) -> (entity:entity_module.Entity_Data, err:Lo
         return entity, LoadingError.InvalidFormat
     }
     sprite_sheet, ok = data["sprite"].(json.Object)
+    if !ok {
+        eprintln("Failed to find sprite in configuration/invalid format")
+        return entity, LoadingError.InvalidFormat
+    }
+    animations_data, ok = data["animations"].(json.Object)
     if !ok {
         eprintln("Failed to find sprite in configuration/invalid format")
         return entity, LoadingError.InvalidFormat
@@ -65,17 +71,26 @@ parse_entity :: proc(bytes: []byte) -> (entity:entity_module.Entity_Data, err:Lo
         return entity, LoadingError.InvalidFormat
     }
 
+    // get attack animations
+    animation_iter := animations_data["attack"].(json.Object)["base"].(json.Array)
+    animations_array : map[entity_module.EntityAttacks]entity_module.Attack_Data
+
+    // assume this doesn't fail
+    for a,_  in animation_iter {
+
+
+
+    }
+
     // sprite data
+
 
 
 
     ss := animations.SpriteSheet{}
 
-
-
     return {}, nil
 }
-
 
 load_entity ::proc(
     path: string = "assets/elemental_ranger/data.json"

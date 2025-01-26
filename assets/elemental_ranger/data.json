@@ -11,7 +11,11 @@
     "height": 128
   },
   "animations": {
-    "idle": {},
+    "idle": {
+      "row": "",
+      "column": "",
+      "length": "",
+    },
     "run": {},
     "attacks": {
       "base": {}

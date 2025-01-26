@@ -13,24 +13,44 @@ AnimationIndex :: enum {
     Idle,
     Run,
     Walk,
-    BaseAttack1,
-    BaseAttack2,
-    BaseAttack3,
-    BaseAttack4,
-    BaseAttack5,
-    BaseAttack6,
-    BaseAttack7,
-    BaseAttack8,
-    BaseAttack9,
+    Ult,
+    NormalAttack1,
+    NormalAttack2,
+    NormalAttack3,
+    NormalAttack4,
+    NormalAttack5,
+    NormalAttack6,
+    NormalAttack7,
+    NormalAttack8,
+    NormalAttackEnd1,
+    NormalAttackEnd2,
+    NormalAttackEnd3,
+    NormalAttackEnd4,
+    NormalAttackEnd5,
+    NormalAttackEnd6,
+    NormalAttackEnd7,
+    NormalAttackEnd8,
+    Skill1,
+    Skill2,
+    Skill3,
+    SkillEnd1,
+    SkillEnd2,
+    SkillEnd3,
+}
+
+// honestly, idfk
+AnimationTypeAttack :: struct {
+    end: u32,
+}
+
+AnimationType :: union {
+    AnimationTypeAttack,
 }
 
 SS_Animation_Data :: struct {
+    type: AnimationType,
     row: int,
     length: int,
-    can_interrupt: bool,
-    can_move: bool,
-    is_attack: bool,
-    attack_end: int,
     body_x_offset: f32,
     body_y_offset: f32,
     body_width: f32,

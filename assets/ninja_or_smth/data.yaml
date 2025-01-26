@@ -1,0 +1,48 @@
+name: filian
+
+body:
+  width: 40
+  height: 48
+  x: 0
+  y: -40
+
+sprite:
+  width: 288
+  height: 128
+
+animations:
+  idle:
+    row: 0
+    column: 0
+    length: 8
+
+  run:
+    row: 1
+    column: 0
+    length: 8
+
+  attacks:
+    skill:
+      row: 1
+      column: 0
+      length: 8
+
+    base attack 1:
+      row: 6
+      column: 0
+      length: 4
+      end:
+        row: 6
+        column: 4
+        length: 4
+
+      base attack 1:
+        row: 6
+        column: 4
+        length: 6
+        end:
+          row: 9
+          column: 11
+          length: 4
+
+desc: "body x and y describe offset relative to center"
