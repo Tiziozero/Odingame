@@ -1,5 +1,9 @@
 plan
 
+no yaml
+use tagged unions (unions with enums) for stuff where possible
+use enums and maps for attach data and animation info
+
 entity state:
     • entity can not be in dialoge and attack or move at the same time
 
